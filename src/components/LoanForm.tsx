@@ -32,12 +32,17 @@ export function LoanForm({ comisionAdminDefault, valoresIniciales, onGuardar, on
   const [notas, setNotas] = useState(valoresIniciales?.notas ?? '')
   const [error, setError] = useState('')
 
+  const esUnico = modoPago === 'unico'
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!persona.trim()) return setError('Ingresa el nombre de la persona.')
     if (!monto || Number(monto) <= 0) return setError('Ingresa un monto válido.')
-    if (!fechaInicio || !fechaFin) return setError('Ingresa las fechas de inicio y fin.')
-    if (fechaFin < fechaInicio) return setError('La fecha de fin debe ser posterior a la de inicio.')
+    if (!fechaInicio) return setError('Ingresa la fecha de inicio.')
+    if (esUnico) {
+      if (!fechaFin) return setError('Ingresa la fecha de vencimiento.')
+      if (fechaFin < fechaInicio) return setError('La fecha de fin debe ser posterior a la de inicio.')
+    }
     if (tasaInteres === '' || Number(tasaInteres) < 0) return setError('Ingresa un % de interés válido.')
     if (comisionAdmin === '' || Number(comisionAdmin) < 0 || Number(comisionAdmin) > 100)
       return setError('La comisión del administrador debe estar entre 0 y 100.')
@@ -47,7 +52,7 @@ export function LoanForm({ comisionAdminDefault, valoresIniciales, onGuardar, on
       persona: persona.trim(),
       monto: Number(monto),
       fechaInicio,
-      fechaFin,
+      fechaFin: esUnico ? fechaFin : undefined,
       tasaInteres: Number(tasaInteres),
       modoPago,
       comisionAdmin: Number(comisionAdmin),
@@ -96,18 +101,22 @@ export function LoanForm({ comisionAdminDefault, valoresIniciales, onGuardar, on
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1">Fecha de vencimiento</label>
-          <input
-            className="w-full border border-gray-300 rounded px-3 py-2"
-            type="date"
-            value={fechaFin}
-            onChange={(e) => setFechaFin(e.target.value)}
-          />
-        </div>
+        {esUnico && (
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1">Fecha de vencimiento</label>
+            <input
+              className="w-full border border-gray-300 rounded px-3 py-2"
+              type="date"
+              value={fechaFin}
+              onChange={(e) => setFechaFin(e.target.value)}
+            />
+          </div>
+        )}
 
         <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1">% Interés (total del plazo)</label>
+          <label className="block text-sm font-medium text-gray-600 mb-1">
+            {esUnico ? '% Interés (total del plazo)' : '% Interés por periodo (sobre saldo)'}
+          </label>
           <input
             className="w-full border border-gray-300 rounded px-3 py-2"
             type="number"
@@ -132,6 +141,12 @@ export function LoanForm({ comisionAdminDefault, valoresIniciales, onGuardar, on
               </option>
             ))}
           </select>
+          {!esUnico && (
+            <p className="text-xs text-gray-500 mt-1">
+              Préstamo abierto: sin fecha de cierre fija, el vencimiento se renueva cada periodo hasta saldar
+              el capital.
+            </p>
+          )}
         </div>
 
         <div>

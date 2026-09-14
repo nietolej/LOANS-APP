@@ -32,7 +32,8 @@ export function LoanList({ prestamos, pagos, onSeleccionar, onEditar, onEliminar
             <th className="px-4 py-3">Persona</th>
             <th className="px-4 py-3">Capital</th>
             <th className="px-4 py-3">Interés %</th>
-            <th className="px-4 py-3">Vence</th>
+            <th className="px-4 py-3">Vencido</th>
+            <th className="px-4 py-3">Próximo pago</th>
             <th className="px-4 py-3">Saldo</th>
             <th className="px-4 py-3">Estado</th>
             <th className="px-4 py-3"></th>
@@ -47,7 +48,34 @@ export function LoanList({ prestamos, pagos, onSeleccionar, onEditar, onEliminar
                 <td className="px-4 py-3 font-medium text-gray-800">{p.persona}</td>
                 <td className="px-4 py-3">{formatoMoneda(p.monto)}</td>
                 <td className="px-4 py-3">{p.tasaInteres}%</td>
-                <td className="px-4 py-3">{formatoFecha(p.fechaFin)}</td>
+                <td className="px-4 py-3">
+                  {r.abierto ? (
+                    r.montoVencido !== undefined ? (
+                      <span className="text-rose-600 font-medium">
+                        {formatoMoneda(r.montoVencido)}
+                        <span className="text-rose-400"> · {formatoFecha(r.fechaVencido ?? '')}</span>
+                      </span>
+                    ) : (
+                      '—'
+                    )
+                  ) : r.vencido ? (
+                    <span className="text-rose-600 font-medium">
+                      {formatoMoneda(r.saldoPendiente)}
+                      <span className="text-rose-400"> · {formatoFecha(p.fechaFin ?? '')}</span>
+                    </span>
+                  ) : (
+                    '—'
+                  )}
+                </td>
+                <td className="px-4 py-3">
+                  {r.abierto
+                    ? r.montoProximo !== undefined
+                      ? `${formatoMoneda(r.montoProximo)} · ${formatoFecha(r.fechaProximo ?? '')}`
+                      : '—'
+                    : !r.vencido
+                      ? formatoFecha(p.fechaFin ?? '')
+                      : '—'}
+                </td>
                 <td className="px-4 py-3">{formatoMoneda(r.saldoPendiente)}</td>
                 <td className="px-4 py-3">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${estadoColor[estadoMostrado]}`}>
@@ -76,6 +104,12 @@ export function LoanList({ prestamos, pagos, onSeleccionar, onEditar, onEliminar
                     </span>
                   ) : (
                     <>
+                      <button
+                        onClick={() => onSeleccionar(p.id)}
+                        className="text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded px-2 py-1 mr-3"
+                      >
+                        Registrar pago
+                      </button>
                       <button
                         onClick={() => onEditar(p.id)}
                         className="text-xs text-indigo-600 hover:text-indigo-800 mr-3"

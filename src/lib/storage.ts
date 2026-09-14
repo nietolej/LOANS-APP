@@ -18,7 +18,12 @@ export function cargarDatos(): AppData {
     const parsed = JSON.parse(raw)
     return {
       prestamos: parsed.prestamos ?? [],
-      pagos: parsed.pagos ?? [],
+      // Pagos registrados antes de distinguir capital/interés se tratan como
+      // abono a capital, para preservar el comportamiento previo (reducían el saldo total).
+      pagos: (parsed.pagos ?? []).map((p: AppData['pagos'][number]) => ({
+        ...p,
+        tipo: p.tipo ?? 'capital',
+      })),
       configuracion: { ...defaultData.configuracion, ...parsed.configuracion },
     }
   } catch {

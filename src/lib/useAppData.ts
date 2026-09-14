@@ -41,6 +41,13 @@ export function useAppData() {
     }))
   }, [])
 
+  const actualizarPago = useCallback((id: string, cambios: Partial<Omit<Pago, 'id' | 'prestamoId'>>) => {
+    setData((prev) => ({
+      ...prev,
+      pagos: prev.pagos.map((p) => (p.id === id ? { ...p, ...cambios } : p)),
+    }))
+  }, [])
+
   const eliminarPago = useCallback((id: string) => {
     setData((prev) => ({
       ...prev,
@@ -68,6 +75,7 @@ export function useAppData() {
     actualizarPrestamo,
     eliminarPrestamo,
     agregarPago,
+    actualizarPago,
     eliminarPago,
     actualizarConfiguracion,
     aplicarComisionATodos,
