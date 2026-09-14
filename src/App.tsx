@@ -1,18 +1,22 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ClientStats } from './components/ClientStats'
 import { Dashboard } from './components/Dashboard'
+import { Login } from './components/Login'
 import { LoanDetail } from './components/LoanDetail'
 import { LoanForm } from './components/LoanForm'
 import { LoanList } from './components/LoanList'
 import { Settings } from './components/Settings'
+import { leerDatosLocalesPendientes, limpiarDatosLocales } from './lib/storage'
 import { useAppData } from './lib/useAppData'
+import { useAuth } from './lib/useAuth'
 import type { Prestamo } from './types'
 
 type Tab = 'dashboard' | 'prestamos' | 'clientes' | 'configuracion'
 
-function App() {
+function AppContent({ uid, email, onLogout }: { uid: string; email: string; onLogout: () => void }) {
   const {
     data,
+    cargando,
     agregarPrestamo,
     actualizarPrestamo,
     eliminarPrestamo,
@@ -21,13 +25,28 @@ function App() {
     eliminarPago,
     actualizarConfiguracion,
     aplicarComisionATodos,
-  } = useAppData()
+    importarDatos,
+  } = useAppData(uid)
 
   const [tab, setTab] = useState<Tab>('dashboard')
   const [mostrarForm, setMostrarForm] = useState(false)
   const [editandoId, setEditandoId] = useState<string | null>(null)
   const [seleccionadoId, setSeleccionadoId] = useState<string | null>(null)
   const [filtroPersona, setFiltroPersona] = useState<string | null>(null)
+
+  // Migra una única vez los datos que hayan quedado en el localStorage de este
+  // navegador (de antes de usar Firestore) a la cuenta recién autenticada.
+  const migracionIntentada = useRef(false)
+  useEffect(() => {
+    if (cargando || migracionIntentada.current) return
+    migracionIntentada.current = true
+    if (data.prestamos.length > 0 || data.pagos.length > 0) return
+    const pendientes = leerDatosLocalesPendientes()
+    if (pendientes && (pendientes.prestamos.length > 0 || pendientes.pagos.length > 0)) {
+      importarDatos(pendientes)
+      limpiarDatosLocales()
+    }
+  }, [cargando, data, importarDatos])
 
   const prestamoEditando = editandoId ? data.prestamos.find((p) => p.id === editandoId) : undefined
   const prestamoSeleccionado = seleccionadoId ? data.prestamos.find((p) => p.id === seleccionadoId) : undefined
@@ -53,12 +72,20 @@ function App() {
     .filter((p) => !filtroPersona || p.persona === filtroPersona)
     .sort((a, b) => (a.creadoEn < b.creadoEn ? 1 : -1))
 
+  if (cargando) {
+    return (
+      <div className="min-h-svh bg-gray-100 flex items-center justify-center">
+        <p className="text-gray-500 text-sm">Cargando datos...</p>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-svh bg-gray-100">
       <header className="bg-white border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between flex-wrap gap-2">
           <h1 className="text-xl font-bold text-gray-800">💰 Gestión de Préstamos</h1>
-          <nav className="flex gap-1">
+          <nav className="flex items-center gap-1 flex-wrap">
             {tabs.map((t) => (
               <button
                 key={t.id}
@@ -76,6 +103,13 @@ function App() {
                 {t.label}
               </button>
             ))}
+            <span className="text-xs text-gray-400 ml-2 hidden sm:inline">{email}</span>
+            <button
+              onClick={onLogout}
+              className="text-xs text-gray-500 hover:text-red-600 ml-1 px-2 py-1.5"
+            >
+              Salir
+            </button>
           </nav>
         </div>
       </header>
@@ -174,6 +208,24 @@ function App() {
       </main>
     </div>
   )
+}
+
+function App() {
+  const { user, cargando, login, logout } = useAuth()
+
+  if (cargando) {
+    return (
+      <div className="min-h-svh bg-gray-100 flex items-center justify-center">
+        <p className="text-gray-500 text-sm">Cargando...</p>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <Login onLogin={login} />
+  }
+
+  return <AppContent uid={user.uid} email={user.email ?? ''} onLogout={logout} />
 }
 
 export default App

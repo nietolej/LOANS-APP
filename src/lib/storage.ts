@@ -1,8 +1,10 @@
+import { doc, onSnapshot, setDoc, type Unsubscribe } from 'firebase/firestore'
 import type { AppData } from '../types'
+import { db } from './firebase'
 
 const STORAGE_KEY = 'loans-app-data-v1'
 
-const defaultData: AppData = {
+export const defaultData: AppData = {
   prestamos: [],
   pagos: [],
   configuracion: {
@@ -11,28 +13,55 @@ const defaultData: AppData = {
   },
 }
 
-export function cargarDatos(): AppData {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return defaultData
-    const parsed = JSON.parse(raw)
-    return {
-      prestamos: parsed.prestamos ?? [],
-      // Pagos registrados antes de distinguir capital/interés se tratan como
-      // abono a capital, para preservar el comportamiento previo (reducían el saldo total).
-      pagos: (parsed.pagos ?? []).map((p: AppData['pagos'][number]) => ({
-        ...p,
-        tipo: p.tipo ?? 'capital',
-      })),
-      configuracion: { ...defaultData.configuracion, ...parsed.configuracion },
-    }
-  } catch {
-    return defaultData
+function normalizar(parsed: Partial<AppData> | undefined): AppData {
+  return {
+    prestamos: parsed?.prestamos ?? [],
+    // Pagos registrados antes de distinguir capital/interés se tratan como
+    // abono a capital, para preservar el comportamiento previo (reducían el saldo total).
+    pagos: (parsed?.pagos ?? []).map((p) => ({
+      ...p,
+      tipo: p.tipo ?? 'capital',
+    })),
+    configuracion: { ...defaultData.configuracion, ...parsed?.configuracion },
   }
 }
 
-export function guardarDatos(data: AppData) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+/** Datos que hayan quedado en el localStorage de este navegador de antes de usar Firestore. */
+export function leerDatosLocalesPendientes(): AppData | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    return normalizar(JSON.parse(raw))
+  } catch {
+    return null
+  }
+}
+
+export function limpiarDatosLocales() {
+  localStorage.removeItem(STORAGE_KEY)
+}
+
+function docPorUsuario(uid: string) {
+  return doc(db, 'usuarios', uid)
+}
+
+/** Escucha los datos del usuario en tiempo real; se actualizan en todos los dispositivos. */
+export function suscribirDatos(
+  uid: string,
+  onDatos: (data: AppData) => void,
+  onError: (error: Error) => void,
+): Unsubscribe {
+  return onSnapshot(
+    docPorUsuario(uid),
+    (snap) => {
+      onDatos(snap.exists() ? normalizar(snap.data() as Partial<AppData>) : defaultData)
+    },
+    onError,
+  )
+}
+
+export async function guardarDatos(uid: string, data: AppData) {
+  await setDoc(docPorUsuario(uid), data)
 }
 
 export function nuevoId(): string {
