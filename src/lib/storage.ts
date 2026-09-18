@@ -7,6 +7,7 @@ const STORAGE_KEY = 'loans-app-data-v1'
 export const defaultData: AppData = {
   prestamos: [],
   pagos: [],
+  liquidaciones: [],
   configuracion: {
     nombreAdmin: 'Administrador',
     comisionAdminDefault: 25,
@@ -22,6 +23,8 @@ function normalizar(parsed: Partial<AppData> | undefined): AppData {
       ...p,
       tipo: p.tipo ?? 'capital',
     })),
+    // Cuentas creadas antes de este campo no lo tienen guardado en Firestore.
+    liquidaciones: parsed?.liquidaciones ?? [],
     configuracion: { ...defaultData.configuracion, ...parsed?.configuracion },
   }
 }

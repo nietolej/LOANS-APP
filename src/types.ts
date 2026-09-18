@@ -32,6 +32,21 @@ export interface Pago {
   notas?: string
 }
 
+export type Beneficiario = 'admin' | 'inversor'
+
+// Registro de dinero REALMENTE entregado al administrador o al inversor, separado del
+// cálculo teórico de "lo que le corresponde" (gananciaAdmin/gananciaPropietario en
+// calculations.ts). Es un ledger global del portafolio, no atado a un préstamo
+// específico: en la práctica el admin/inversor se liquida con montos acumulados de
+// varios préstamos a la vez, no préstamo por préstamo.
+export interface Liquidacion {
+  id: string
+  beneficiario: Beneficiario
+  fecha: string // ISO date
+  monto: number
+  notas?: string
+}
+
 export interface Configuracion {
   nombreAdmin: string
   comisionAdminDefault: number
@@ -40,5 +55,6 @@ export interface Configuracion {
 export interface AppData {
   prestamos: Prestamo[]
   pagos: Pago[]
+  liquidaciones: Liquidacion[]
   configuracion: Configuracion
 }

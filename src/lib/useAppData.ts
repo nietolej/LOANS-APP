@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { AppData, Configuracion, Pago, Prestamo } from '../types'
+import type { AppData, Configuracion, Liquidacion, Pago, Prestamo } from '../types'
 import { defaultData, guardarDatos, nuevoId, suscribirDatos } from './storage'
 
 export function useAppData(uid: string) {
   const [data, setData] = useState<AppData>(defaultData)
   const [cargando, setCargando] = useState(true)
+  // Antes un fallo de guardarDatos solo se logueaba en consola: el estado local ya se
+  // había actualizado de forma optimista (línea de abajo), así que el usuario veía el
+  // cambio "aplicado" en pantalla aunque nunca se hubiera escrito en Firestore, y
+  // desaparecía en el siguiente resync sin ninguna señal visible del error real.
+  const [errorGuardado, setErrorGuardado] = useState<string | null>(null)
   const dataRef = useRef(data)
   useEffect(() => {
     dataRef.current = data
@@ -29,10 +34,20 @@ export function useAppData(uid: string) {
   const escribir = useCallback(
     (nuevaData: AppData) => {
       setData(nuevaData)
-      guardarDatos(uid, nuevaData).catch((error) => console.error('Error al guardar:', error))
+      setErrorGuardado(null)
+      guardarDatos(uid, nuevaData).catch((error: unknown) => {
+        console.error('Error al guardar:', error)
+        const mensaje = error instanceof Error ? error.message : String(error)
+        setErrorGuardado(
+          `No se pudo guardar el último cambio en la nube: ${mensaje}. Revisa tu conexión y vuelve a intentarlo; ` +
+            'si recargas la página ahora, este cambio se perderá.',
+        )
+      })
     },
     [uid],
   )
+
+  const descartarErrorGuardado = useCallback(() => setErrorGuardado(null), [])
 
   const agregarPrestamo = useCallback(
     (prestamo: Omit<Prestamo, 'id' | 'creadoEn'>) => {
@@ -98,6 +113,26 @@ export function useAppData(uid: string) {
     [escribir],
   )
 
+  const agregarLiquidacion = useCallback(
+    (liquidacion: Omit<Liquidacion, 'id'>) => {
+      escribir({
+        ...dataRef.current,
+        liquidaciones: [...dataRef.current.liquidaciones, { ...liquidacion, id: nuevoId() }],
+      })
+    },
+    [escribir],
+  )
+
+  const eliminarLiquidacion = useCallback(
+    (id: string) => {
+      escribir({
+        ...dataRef.current,
+        liquidaciones: dataRef.current.liquidaciones.filter((l) => l.id !== id),
+      })
+    },
+    [escribir],
+  )
+
   const actualizarConfiguracion = useCallback(
     (cambios: Partial<Configuracion>) => {
       escribir({
@@ -128,12 +163,16 @@ export function useAppData(uid: string) {
   return {
     data,
     cargando,
+    errorGuardado,
+    descartarErrorGuardado,
     agregarPrestamo,
     actualizarPrestamo,
     eliminarPrestamo,
     agregarPago,
     actualizarPago,
     eliminarPago,
+    agregarLiquidacion,
+    eliminarLiquidacion,
     actualizarConfiguracion,
     aplicarComisionATodos,
     importarDatos,

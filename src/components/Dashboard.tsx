@@ -1,9 +1,16 @@
-import type { AppData } from '../types'
+import type { AppData, Liquidacion } from '../types'
 import { calcularResumen, formatoFecha, formatoMoneda } from '../lib/calculations'
 import { calcularRentabilidadMensual, formatoMes, serieCapitalGlobal } from '../lib/stats'
 import { BarChart, StackedBar, StepLineChart } from './Charts'
+import { Liquidaciones } from './Liquidaciones'
 
-export function Dashboard({ data }: { data: AppData }) {
+interface Props {
+  data: AppData
+  onAgregarLiquidacion: (liquidacion: Omit<Liquidacion, 'id'>) => void
+  onEliminarLiquidacion: (id: string) => void
+}
+
+export function Dashboard({ data, onAgregarLiquidacion, onEliminarLiquidacion }: Props) {
   const { prestamos, pagos } = data
 
   let capitalPrestado = 0
@@ -103,6 +110,18 @@ export function Dashboard({ data }: { data: AppData }) {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {prestamos.length > 0 && (
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <Liquidaciones
+            liquidaciones={data.liquidaciones}
+            gananciaAdmin={gananciaAdmin}
+            gananciaPropietario={gananciaPropietario}
+            onAgregar={onAgregarLiquidacion}
+            onEliminar={onEliminarLiquidacion}
+          />
         </div>
       )}
 

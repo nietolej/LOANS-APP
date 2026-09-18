@@ -17,12 +17,16 @@ function AppContent({ uid, email, onLogout }: { uid: string; email: string; onLo
   const {
     data,
     cargando,
+    errorGuardado,
+    descartarErrorGuardado,
     agregarPrestamo,
     actualizarPrestamo,
     eliminarPrestamo,
     agregarPago,
     actualizarPago,
     eliminarPago,
+    agregarLiquidacion,
+    eliminarLiquidacion,
     actualizarConfiguracion,
     aplicarComisionATodos,
     importarDatos,
@@ -114,8 +118,28 @@ function AppContent({ uid, email, onLogout }: { uid: string; email: string; onLo
         </div>
       </header>
 
+      {errorGuardado && (
+        <div className="bg-red-50 border-b border-red-200">
+          <div className="max-w-5xl mx-auto px-4 py-3 flex items-start justify-between gap-3">
+            <p className="text-sm text-red-700">⚠️ {errorGuardado}</p>
+            <button
+              onClick={descartarErrorGuardado}
+              className="text-red-500 hover:text-red-700 text-sm font-medium flex-none"
+            >
+              Cerrar ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       <main className="max-w-5xl mx-auto px-4 py-6">
-        {tab === 'dashboard' && <Dashboard data={data} />}
+        {tab === 'dashboard' && (
+          <Dashboard
+            data={data}
+            onAgregarLiquidacion={agregarLiquidacion}
+            onEliminarLiquidacion={eliminarLiquidacion}
+          />
+        )}
 
         {tab === 'prestamos' && (
           <div className="space-y-4">
