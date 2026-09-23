@@ -23,27 +23,34 @@ export interface Prestamo {
 
 export type TipoPago = 'capital' | 'interes'
 
+export type Beneficiario = 'admin' | 'inversor'
+
 export interface Pago {
   id: string
   prestamoId: string
   fecha: string // ISO date
   monto: number
   tipo: TipoPago
+  // A quién le llegó el dinero del cliente. Ausente (pagos antiguos) = 'admin', que es
+  // el flujo normal: cliente → administradora → inversor. 'inversor' = el cliente le
+  // pagó directo al inversor, así que ese dinero nunca pasó por la caja de la administradora.
+  destino?: Beneficiario
   notas?: string
 }
 
-export type Beneficiario = 'admin' | 'inversor'
-
-// Registro de dinero REALMENTE entregado al administrador o al inversor, separado del
-// cálculo teórico de "lo que le corresponde" (gananciaAdmin/gananciaPropietario en
-// calculations.ts). Es un ledger global del portafolio, no atado a un préstamo
-// específico: en la práctica el admin/inversor se liquida con montos acumulados de
-// varios préstamos a la vez, no préstamo por préstamo.
+// Segundo flujo de dinero: el cliente le paga a la administradora (Pago) y la
+// administradora reenvía al inversor. Este ledger registra los movimientos de salida
+// de la caja de la administradora; es global del portafolio, no atado a un préstamo
+// (se giran montos acumulados de varios préstamos a la vez).
+//  - beneficiario 'inversor': giro al inversor. `monto` es el total girado; `capital`
+//    es la parte que devuelve capital (el resto es interés). Sin `capital` = solo interés.
+//  - beneficiario 'admin': comisión que la administradora se descuenta/retira de la caja.
 export interface Liquidacion {
   id: string
   beneficiario: Beneficiario
   fecha: string // ISO date
   monto: number
+  capital?: number // solo giros al inversor
   notas?: string
 }
 

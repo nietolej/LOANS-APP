@@ -2,6 +2,7 @@ import type { AppData, Liquidacion } from '../types'
 import { calcularResumen, formatoFecha, formatoMoneda } from '../lib/calculations'
 import { calcularRentabilidadMensual, formatoMes, serieCapitalGlobal } from '../lib/stats'
 import { BarChart, StackedBar, StepLineChart } from './Charts'
+import { Extracto } from './Extracto'
 import { Liquidaciones } from './Liquidaciones'
 
 interface Props {
@@ -25,9 +26,11 @@ export function Dashboard({ data, onAgregarLiquidacion, onEliminarLiquidacion }:
   let adminPendiente = 0
   let inversorCobrado = 0
   let inversorPendiente = 0
+  let capitalCobrado = 0
 
   for (const p of prestamos) {
     const r = calcularResumen(p, pagos)
+    capitalCobrado += r.capitalPagado
     capitalPrestado += p.monto
     interesTotal += r.interesTotal
     totalPagado += r.totalPagado
@@ -41,6 +44,20 @@ export function Dashboard({ data, onAgregarLiquidacion, onEliminarLiquidacion }:
     adminPendiente += r.interesPendiente * cuotaAdmin
     inversorCobrado += r.interesPagado * (1 - cuotaAdmin)
     inversorPendiente += r.interesPendiente * (1 - cuotaAdmin)
+  }
+
+  // Pagos que el cliente hizo directo al inversor (no pasaron por la caja de la administradora).
+  let directoInteres = 0
+  let directoCapital = 0
+  let directoComision = 0
+  for (const pago of pagos) {
+    if (pago.destino !== 'inversor') continue
+    if (pago.tipo === 'capital') directoCapital += pago.monto
+    else {
+      directoInteres += pago.monto
+      const prestamo = prestamos.find((p) => p.id === pago.prestamoId)
+      if (prestamo) directoComision += pago.monto * (prestamo.comisionAdmin / 100)
+    }
   }
 
   const gananciaAdmin = adminCobrado + adminPendiente
@@ -117,11 +134,21 @@ export function Dashboard({ data, onAgregarLiquidacion, onEliminarLiquidacion }:
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <Liquidaciones
             liquidaciones={data.liquidaciones}
-            gananciaAdmin={gananciaAdmin}
-            gananciaPropietario={gananciaPropietario}
+            interesCobrado={adminCobrado + inversorCobrado}
+            capitalCobrado={capitalCobrado}
+            comisionAdminCobrada={adminCobrado}
+            directoInteres={directoInteres}
+            directoCapital={directoCapital}
+            directoComision={directoComision}
             onAgregar={onAgregarLiquidacion}
             onEliminar={onEliminarLiquidacion}
           />
+        </div>
+      )}
+
+      {prestamos.length > 0 && (
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <Extracto data={data} />
         </div>
       )}
 

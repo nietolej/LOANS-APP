@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { Pago, Prestamo } from '../types'
+import type { Beneficiario, Pago, Prestamo } from '../types'
 import { calcularResumen, formatoFecha, formatoMoneda } from '../lib/calculations'
 import { generarCronograma, type EstadoCuota } from '../lib/cronograma'
 import { serieCapitalPrestamo } from '../lib/stats'
@@ -59,6 +59,7 @@ export function LoanDetail({
   const [montoPago, setMontoPago] = useState('')
   const [tipoPago, setTipoPago] = useState<Pago['tipo']>('interes')
   const [fechaPago, setFechaPago] = useState(hoyISO())
+  const [destinoPago, setDestinoPago] = useState<Beneficiario>('admin')
   const [notasPago, setNotasPago] = useState('')
   const [error, setError] = useState('')
 
@@ -66,6 +67,7 @@ export function LoanDetail({
   const [editFecha, setEditFecha] = useState('')
   const [editMonto, setEditMonto] = useState('')
   const [editTipo, setEditTipo] = useState<Pago['tipo']>('interes')
+  const [editDestino, setEditDestino] = useState<Beneficiario>('admin')
   const [editNotas, setEditNotas] = useState('')
 
   function iniciarEdicionPago(p: Pago) {
@@ -73,6 +75,7 @@ export function LoanDetail({
     setEditFecha(p.fecha)
     setEditMonto(String(p.monto))
     setEditTipo(p.tipo)
+    setEditDestino(p.destino ?? 'admin')
     setEditNotas(p.notas ?? '')
   }
 
@@ -84,6 +87,7 @@ export function LoanDetail({
       fecha: editFecha,
       monto: Number(editMonto),
       tipo: editTipo,
+      destino: editDestino,
       notas: editNotas.trim() || undefined,
     })
     setEditandoPagoId(null)
@@ -98,6 +102,7 @@ export function LoanDetail({
       fecha: fechaPago,
       monto: Number(montoPago),
       tipo: tipoPago,
+      destino: destinoPago,
       notas: notasPago.trim() || undefined,
     })
     setMontoPago('')
@@ -298,6 +303,17 @@ export function LoanDetail({
               <option value="capital">Abono a capital</option>
             </select>
           </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Recibió el dinero</label>
+            <select
+              className="border border-gray-300 rounded px-2 py-1.5"
+              value={destinoPago}
+              onChange={(e) => setDestinoPago(e.target.value as Beneficiario)}
+            >
+              <option value="admin">Administradora</option>
+              <option value="inversor">Inversor (directo)</option>
+            </select>
+          </div>
           <div className="flex-1 min-w-[150px]">
             <label className="block text-xs text-gray-500 mb-1">Notas</label>
             <input
@@ -394,6 +410,17 @@ export function LoanDetail({
                         <option value="capital">Abono a capital</option>
                       </select>
                     </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Recibió</label>
+                      <select
+                        className="border border-gray-300 rounded px-2 py-1.5"
+                        value={editDestino}
+                        onChange={(e) => setEditDestino(e.target.value as Beneficiario)}
+                      >
+                        <option value="admin">Administradora</option>
+                        <option value="inversor">Inversor (directo)</option>
+                      </select>
+                    </div>
                     <div className="flex-1 min-w-[120px]">
                       <label className="block text-xs text-gray-500 mb-1">Notas</label>
                       <input
@@ -427,6 +454,13 @@ export function LoanDetail({
                       }`}
                     >
                       {p.tipo === 'capital' ? 'Abono a capital' : 'Pago de interés'}
+                    </span>
+                    <span
+                      className={`ml-1 text-xs px-2 py-0.5 rounded-full ${
+                        p.destino === 'inversor' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                      }`}
+                    >
+                      → {p.destino === 'inversor' ? 'Inversor' : 'Administradora'}
                     </span>
                     {p.notas && <span className="text-gray-500"> · {p.notas}</span>}
                   </div>
